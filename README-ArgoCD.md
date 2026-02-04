@@ -8,8 +8,7 @@ In this setup, we assume access is through `localhost` mapped via k3d's proxy lo
 
 ### Prerequisites
 - Kubernetes Cluster (k3d) running.
-- Gateway API CRDs & Controller (Nginx Gateway Fabric) installed.
-- `setup-argocd.sh` script available.
+- **Tools**: `kubectl`, `helm`, `argocd`.
 
 > **Tip**: Install tools easily with **Arkade**:
 > ```bash
@@ -19,26 +18,38 @@ In this setup, we assume access is through `localhost` mapped via k3d's proxy lo
 
 ### Installation Steps
 
-1.  **Run the Setup Script**
-    This script installs ArgoCD, patches it to run in "insecure" mode (HTTP), and prepares it for Gateway API offloading.
+1.  **Run the Setup Script (Kustomize)**
+    This script installs ArgoCD using Kustomize (`argocd-install/`) and patches it to run in "insecure" mode (HTTP).
     ```bash
     ./setup-argocd.sh
     ```
+    *Files used:*
+    *   `argocd-install/kustomization.yaml`: Main declaration.
+    *   `argocd-install/server-insecure-patch.yaml`: Patch for `--insecure`.
 
-2.  **Deploy the Route**
+2.  **Bootstrap Gateway (GitOps)**
+    We use ArgoCD to install the Gateway infrastructure (CRDs + Nginx Fabric).
+    ```bash
+    kubectl apply -f gitops/
+    ```
+    *This creates two ArgoCD Applications:*
+    *   `gateway-api-crds`: Installs experimental CRDs.
+    *   `nginx-gateway-fabric`: Installs the controller (NodePort 30000).
+
+3.  **Deploy the Route**
     Apply the HTTPRoute to route traffic from the Gateway to ArgoCD.
     ```bash
     kubectl apply -f manifests/argocd-route.yaml
     ```
 
-3.  **Configure DNS (Local)**
+4.  **Configure DNS (Local)**
     Since we are using `argocd.localhost`, ensure it resolves to `127.0.0.1`.
     Add this to your `/etc/hosts` (Linux/macOS) or `C:\Windows\System32\drivers\etc\hosts` (Windows):
     ```text
     127.0.0.1 argocd.localhost
     ```
 
-4.  **Access ArgoCD**
+5.  **Access ArgoCD**
     - **URL**: [http://argocd.localhost:8081](http://argocd.localhost:8081)
     - **Get Password**:
       ```bash

@@ -4,7 +4,7 @@ This project sets up a local Kubernetes cluster using `k3d` with the following c
 - **Declarative Configuration**: Defined in `k3d-config.yaml`.
 - **2 Worker Nodes**: Labeled `nodetype=front` and `nodetype=back`.
 - **No Default LoadBalancer/Ingress**: Built-in Traefik and ServiceLB are disabled.
-- **Gateway API**: Uses Nginx Gateway Fabric exposed via NodePort.
+- **Gateway API**: Uses Nginx Gateway Fabric exposed via NodePort (Managed by GitOps).
 - **Local Access**: Services accessible via `localhost:8081` (mapped to NodePort 30000).
 
 ## Topology
@@ -52,7 +52,6 @@ Don't have the tools installed? You can use [Arkade](https://github.com/alexelli
    arkade get helm
    arkade get argocd
    ```
-   *Make sure to add the binary path to your `$PATH` as instructed by the output.*
 
 ### Prerequisites
 - [k3d](https://k3d.io/) installed
@@ -66,28 +65,34 @@ Don't have the tools installed? You can use [Arkade](https://github.com/alexelli
    k3d cluster create --config k3d-config.yaml
    ```
 
-2. **Install Gateway API & Controller**
-   Run the setup script. This installs the CRDs and the Nginx Gateway Fabric controller (via OCI Chart), configuring it to listen on NodePort 30000.
+2. **Install ArgoCD (Core)**
+   We install ArgoCD first because we use it to manage the Gateway installation (**GitOps**).
+   The setup uses **Kustomize** (`argocd-install/`) for declarative configuration.
    ```bash
-   chmod +x setup-gateway.sh
-   ./setup-gateway.sh
+   chmod +x setup-argocd.sh
+   ./setup-argocd.sh
    ```
 
-3. **Deploy Apps & Routes**
+3. **Install Gateway API (GitOps)**
+   Bootstrap the Gateway infrastructure (CRDs and Nginx Controller) using ArgoCD Applications.
+   ```bash
+   kubectl apply -f gitops/
+   ```
+   *You can check the sync status in the ArgoCD UI or via `kubectl get app -n argocd`.*
+
+4. **Deploy Apps & Routes**
    Apply the dummy applications and the Gateway API routes.
    ```bash
    kubectl apply -f manifests/apps-and-routes.yaml
    ```
 
-4. **Install ArgoCD**
-   Install ArgoCD and apply the Gateway route.
+5. **Expose ArgoCD**
+   Apply the HTTPRoute to expose ArgoCD itself via the Gateway.
    ```bash
-   chmod +x setup-argocd.sh
-   ./setup-argocd.sh
    kubectl apply -f manifests/argocd-route.yaml
    ```
 
-5. **Access the Services**
+6. **Access the Services**
    - **Front App**: [http://localhost:8081/front](http://localhost:8081/front)
    - **Back App**: [http://localhost:8081/back](http://localhost:8081/back)
    - **ArgoCD**: [http://argocd.localhost:8081](http://argocd.localhost:8081)

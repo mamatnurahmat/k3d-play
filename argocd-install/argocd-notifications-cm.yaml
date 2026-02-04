@@ -1,0 +1,134 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-notifications-cm
+data:
+  # Microsoft Teams Service Configuration
+  service.teams: |
+    recipientUrls:
+      loyaltoid: $teams-webhook-url
+
+  # Notification Templates - Using correct Teams Message Card format
+  template.app-deployed: |
+    teams:
+      themeColor: "#00FF00"
+      title: "✅ Application Deployed Successfully"
+      text: |
+        **{{.app.metadata.name}}** has been deployed successfully.
+        
+        - **Project:** {{.app.spec.project}}
+        - **Repository:** {{.app.spec.source.repoURL}}
+        - **Revision:** {{.app.status.sync.revision}}
+        - **Namespace:** {{.app.metadata.namespace}}
+
+  template.app-sync-failed: |
+    teams:
+      themeColor: "#FF0000"
+      title: "❌ Application Sync Failed"
+      text: |
+        **{{.app.metadata.name}}** sync has failed.
+        
+        - **Project:** {{.app.spec.project}}
+        - **Repository:** {{.app.spec.source.repoURL}}
+        - **Sync Status:** {{.app.status.sync.status}}
+        
+        Please check the ArgoCD dashboard for more details.
+
+  template.app-sync-running: |
+    teams:
+      themeColor: "#FFA500"
+      title: "🔄 Application Sync In Progress"
+      text: |
+        **{{.app.metadata.name}}** is currently syncing.
+        
+        - **Project:** {{.app.spec.project}}
+        - **Repository:** {{.app.spec.source.repoURL}}
+        - **Target Revision:** {{.app.spec.source.targetRevision}}
+
+  template.app-health-degraded: |
+    teams:
+      themeColor: "#FF6600"
+      title: "⚠️ Application Health Degraded"
+      text: |
+        **{{.app.metadata.name}}** health has degraded.
+        
+        - **Project:** {{.app.spec.project}}
+        - **Health Status:** {{.app.status.health.status}}
+        - **Sync Status:** {{.app.status.sync.status}}
+        
+        Please investigate immediately.
+
+  template.app-created: |
+    teams:
+      themeColor: "#0078D4"
+      title: "🆕 New Application Created"
+      text: |
+        New application **{{.app.metadata.name}}** has been created.
+        
+        - **Project:** {{.app.spec.project}}
+        - **Repository:** {{.app.spec.source.repoURL}}
+        - **Path:** {{.app.spec.source.path}}
+        - **Target Revision:** {{.app.spec.source.targetRevision}}
+
+  template.app-deleted: |
+    teams:
+      themeColor: "#808080"
+      title: "🗑️ Application Deleted"
+      text: |
+        Application **{{.app.metadata.name}}** has been deleted.
+        
+        - **Project:** {{.app.spec.project}}
+
+  template.app-out-of-sync: |
+    teams:
+      themeColor: "#FFCC00"
+      title: "🔀 Application Out of Sync"
+      text: |
+        **{{.app.metadata.name}}** is out of sync with the target revision.
+        
+        - **Project:** {{.app.spec.project}}
+        - **Repository:** {{.app.spec.source.repoURL}}
+        - **Target Revision:** {{.app.spec.source.targetRevision}}
+        - **Current Revision:** {{.app.status.sync.revision}}
+        
+        Please sync the application to apply the latest changes.
+
+  # Triggers - Define when to send notifications
+  trigger.on-deployed: |
+    - when: app.status.operationState.phase in ['Succeeded'] and app.status.health.status == 'Healthy'
+      send: [app-deployed]
+
+  trigger.on-sync-failed: |
+    - when: app.status.operationState.phase in ['Failed', 'Error']
+      send: [app-sync-failed]
+
+  trigger.on-sync-running: |
+    - when: app.status.operationState.phase in ['Running']
+      send: [app-sync-running]
+
+  trigger.on-health-degraded: |
+    - when: app.status.health.status == 'Degraded'
+      send: [app-health-degraded]
+
+  trigger.on-created: |
+    - when: "true"
+      oncePer: app.metadata.uid
+      send: [app-created]
+
+  trigger.on-deleted: |
+    - when: app.metadata.deletionTimestamp != nil
+      send: [app-deleted]
+
+  trigger.on-out-of-sync: |
+    - when: app.status.sync.status == 'OutOfSync'
+      send: [app-out-of-sync]
+
+  # Default subscriptions for all applications
+  subscriptions: |
+    - recipients:
+        - teams:loyaltoid
+      triggers:
+        - on-deployed
+        - on-sync-failed
+        - on-health-degraded
+        - on-out-of-sync
