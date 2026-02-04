@@ -1,0 +1,118 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: front-app
+  labels:
+    app: front
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: front
+  template:
+    metadata:
+      labels:
+        app: front
+    spec:
+      nodeSelector:
+        nodetype: front
+      containers:
+      - name: nginx
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: front-svc
+  labels:
+    app: front
+spec:
+  selector:
+    app: front
+  ports:
+  - port: 80
+    targetPort: 80
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: back-app
+  labels:
+    app: back
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: back
+  template:
+    metadata:
+      labels:
+        app: back
+    spec:
+      nodeSelector:
+        nodetype: back
+      containers:
+      - name: whoami
+        image: traefik/whoami
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: back-svc
+  labels:
+    app: back
+spec:
+  selector:
+    app: back
+  ports:
+  - port: 80
+    targetPort: 80
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: nginx
+spec:
+  controllerName: gateway.nginx.org/nginx-gateway-controller
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: my-gateway
+spec:
+  gatewayClassName: nginx
+  listeners:
+  - name: http
+    port: 80
+    protocol: HTTP
+    # Allow routes from all namespaces (required for ArgoCD in strict namespace)
+    allowedRoutes:
+      namespaces:
+        from: All
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: my-route
+spec:
+  parentRefs:
+  - name: my-gateway
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /front
+    backendRefs:
+    - name: front-svc
+      port: 80
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /back
+    backendRefs:
+    - name: back-svc
+      port: 80
