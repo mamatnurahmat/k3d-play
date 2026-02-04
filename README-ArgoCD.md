@@ -11,6 +11,12 @@ In this setup, we assume access is through `localhost` mapped via k3d's proxy lo
 - Gateway API CRDs & Controller (Nginx Gateway Fabric) installed.
 - `setup-argocd.sh` script available.
 
+> **Tip**: Install tools easily with **Arkade**:
+> ```bash
+> curl -sLS https://get.arkade.dev | sudo sh
+> arkade get k3d kubectl helm argocd
+> ```
+
 ### Installation Steps
 
 1.  **Run the Setup Script**
@@ -44,9 +50,9 @@ In this setup, we assume access is through `localhost` mapped via k3d's proxy lo
 
 ```mermaid
 graph LR
-    User -->|http://argocd.localhost:8081| K3dLB[K3d LoadBalancer]
-    K3dLB -->|NodePort 30000| NGF[Nginx Gateway Fabric]
-    NGF -->|HTTPRoute| ArgoServer[ArgoCD Server]
+    User -->|http://argocd.localhost:8081| K3dLB["K3d LoadBalancer"]
+    K3dLB -->|NodePort 30000| NGF["Nginx Gateway Fabric"]
+    NGF -->|HTTPRoute| ArgoServer["ArgoCD Server"]
     
     subgraph "ArgoCD Namespace"
     ArgoServer
@@ -151,9 +157,9 @@ spec:
 
 ```mermaid
 graph LR
-    User -->|https://argocd.example.com| CloudLB[Cloud LoadBalancer]
-    CloudLB -->|Public IP| NGF[Gateway Controller]
-    NGF -- "Terminates TLS" --> |HTTP| ArgoServer[ArgoCD Server]
+    User -->|https://argocd.example.com| CloudLB["Cloud LoadBalancer"]
+    CloudLB -->|Public IP| NGF["Gateway Controller"]
+    NGF -- "Terminates TLS" --> |HTTP| ArgoServer["ArgoCD Server"]
     
     subgraph "Cluster"
         NGF

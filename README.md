@@ -11,32 +11,48 @@ This project sets up a local Kubernetes cluster using `k3d` with the following c
 
 ```mermaid
 graph TD
-    User[User / Localhost] -->|Port 8081| LB[K3d Proxy LB]
-    LB -->|Port 30000| Server[K3s Server Node]
+    User["User / Localhost"] -->|Port 8081| LB["K3d Proxy LB"]
+    LB -->|Port 30000| Server["K3s Server Node"]
     
-    subgraph Cluster [K3d Cluster]
-        Server -->|NodePort 30000| NGF[Nginx Gateway Fabric Service]
-        NGF -->|Gateway| PodNGF[Nginx Gateway Pod]
+    subgraph Cluster ["K3d Cluster"]
+        Server -->|NodePort 30000| NGF["Nginx Gateway Fabric Service"]
+        NGF -->|Gateway| PodNGF["Nginx Gateway Pod"]
         
-        subgraph NodeFront [Node: front]
-            FrontApp[Front App (Nginx)]
+        subgraph NodeFront ["Node: front"]
+            FrontApp["Front App (Nginx)"]
         end
         
-        subgraph NodeBack [Node: back]
-            BackApp[Back App (whoami)]
+        subgraph NodeBack ["Node: back"]
+            BackApp["Back App (whoami)"]
         end
 
-        subgraph ArgoNS [NS: argocd]
-            ArgoApp[ArgoCD Server]
+        subgraph ArgoNS ["NS: argocd"]
+            ArgoApp["ArgoCD Server"]
         end
         
         PodNGF -->|Route /front| FrontApp
         PodNGF -->|Route /back| BackApp
-        PodNGF -->|Host: argocd.localhost| ArgoApp
+        PodNGF -->|"Host: argocd.localhost"| ArgoApp
     end
 ```
 
 ## Setup Guide
+
+### ⚡ Pro Tip: Quick Tool Setup with Arkade
+Don't have the tools installed? You can use [Arkade](https://github.com/alexellis/arkade) to install everything quickly.
+
+1. **Install Arkade**:
+   ```bash
+   curl -sLS https://get.arkade.dev | sudo sh
+   ```
+2. **Install Required Tools**:
+   ```bash
+   arkade get k3d
+   arkade get kubectl
+   arkade get helm
+   arkade get argocd
+   ```
+   *Make sure to add the binary path to your `$PATH` as instructed by the output.*
 
 ### Prerequisites
 - [k3d](https://k3d.io/) installed
