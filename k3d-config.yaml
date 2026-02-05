@@ -24,7 +24,11 @@ options:
         nodeFilters:
           - agent:1
 ports:
-  # Map localhost:8081 to NodePort 30000 to avoid conflicts on 8080
+  # Map localhost:8081 to NodePort 30000 for HTTP
   - port: "8081:30000"
+    nodeFilters:
+      - loadbalancer
+  # Map localhost:8443 to NodePort 30443 for HTTPS
+  - port: "8443:30443"
     nodeFilters:
       - loadbalancer

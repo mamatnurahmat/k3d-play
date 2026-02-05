@@ -1,0 +1,15 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: app001-tls
+  namespace: default
+spec:
+  secretName: app001-tls-secret
+  duration: 2160h # 90 days
+  renewBefore: 360h # 15 days
+  issuerRef:
+    name: selfsigned-issuer
+    kind: ClusterIssuer
+  commonName: app001.localhost
+  dnsNames:
+    - app001.localhost

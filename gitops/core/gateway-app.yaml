@@ -19,6 +19,9 @@ spec:
           - port: 80
             nodePort: 30000
             name: http
+          - port: 443
+            nodePort: 30443
+            name: https
   destination:
     server: https://kubernetes.default.svc
     namespace: nginx-gateway
