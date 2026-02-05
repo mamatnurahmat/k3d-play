@@ -7,6 +7,7 @@ spec:
   parentRefs:
   - name: my-gateway
     namespace: default
+    sectionName: https
   hostnames:
   - rancher.localhost
   rules:

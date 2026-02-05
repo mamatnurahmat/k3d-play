@@ -23,11 +23,11 @@ spec:
   - name: https
     port: 443
     protocol: HTTPS
-    hostname: app001.localhost
+    hostname: "*.localhost"
     tls:
       mode: Terminate
       certificateRefs:
-      - name: app001-tls-secret
+      - name: localhost-tls
         kind: Secret
     allowedRoutes:
       namespaces:
