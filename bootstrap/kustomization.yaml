@@ -15,8 +15,8 @@ resources:
 
 patches:
   # ArgoCD Notifications - Microsoft Teams Integration
-  - path: argocd-notifications-cm.yaml
-  - path: argocd-notifications-secret.yaml
+  # - path: argocd-notifications-cm.yaml
+  # - path: argocd-notifications-secret.yaml
   # Service Patches
   # - target:
   #     kind: Service

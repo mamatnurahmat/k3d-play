@@ -73,34 +73,13 @@ spec:
     targetPort: 80
 ---
 apiVersion: gateway.networking.k8s.io/v1
-kind: GatewayClass
-metadata:
-  name: nginx
-spec:
-  controllerName: gateway.nginx.org/nginx-gateway-controller
----
-apiVersion: gateway.networking.k8s.io/v1
-kind: Gateway
-metadata:
-  name: my-gateway
-spec:
-  gatewayClassName: nginx
-  listeners:
-  - name: http
-    port: 80
-    protocol: HTTP
-    # Allow routes from all namespaces (required for ArgoCD in strict namespace)
-    allowedRoutes:
-      namespaces:
-        from: All
----
-apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: my-route
 spec:
   parentRefs:
   - name: my-gateway
+    namespace: default
   rules:
   - matches:
     - path:
