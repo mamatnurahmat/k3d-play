@@ -29,7 +29,7 @@ echo "🚀 [3/5] Deploying Gateway Resource && Workloads..."
 # Deploy the Gateway resource (infra definition)
 kubectl apply -f manifests/infra/gateway.yaml
 # Deploy the Apps
-kubectl apply -f manifests/workloads/demo-app.yaml
+# kubectl apply -f manifests/workloads/demo-app.yaml
 
 # 5. Deploy Routes
 echo "🔗 [4/5] Deploying Routes..."

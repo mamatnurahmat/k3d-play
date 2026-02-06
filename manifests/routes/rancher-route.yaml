@@ -16,5 +16,6 @@ spec:
         type: PathPrefix
         value: /
     backendRefs:
-    - name: rancher
+    - name: waf-rancher
+      namespace: default
       port: 80
