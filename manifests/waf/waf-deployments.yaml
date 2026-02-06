@@ -56,115 +56,115 @@ spec:
   ports:
   - port: 80
     targetPort: 8080
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: waf-argocd
-  namespace: default
-  labels:
-    app: waf-argocd
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: waf-argocd
-  template:
-    metadata:
-      labels:
-        app: waf-argocd
-    spec:
-      containers:
-      - name: modsecurity
-        image: owasp/modsecurity-crs:nginx-alpine
-        ports:
-        - containerPort: 8080
-        resources:
-          requests:
-            memory: "64Mi"
-            cpu: "50m"
-          limits:
-            memory: "256Mi"
-            cpu: "200m"
-        env:
-        - name: PARANOIA
-          value: "1"
-        - name: ANOMALY_INBOUND
-          value: "5"
-        - name: ANOMALY_OUTBOUND
-          value: "4"
-        - name: MODSEC_RULE_ENGINE
-          value: "On"
-        - name: BACKEND
-          value: "http://argocd-server.argocd.svc.cluster.local:80"
-        - name: PORT
-          value: "8080"
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: waf-argocd
-  namespace: default
-spec:
-  type: ClusterIP
-  selector:
-    app: waf-argocd
-  ports:
-  - port: 80
-    targetPort: 8080
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: waf-rancher
-  namespace: default
-  labels:
-    app: waf-rancher
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: waf-rancher
-  template:
-    metadata:
-      labels:
-        app: waf-rancher
-    spec:
-      containers:
-      - name: modsecurity
-        image: owasp/modsecurity-crs:nginx-alpine
-        ports:
-        - containerPort: 8080
-        resources:
-          requests:
-            memory: "64Mi"
-            cpu: "50m"
-          limits:
-            memory: "256Mi"
-            cpu: "200m"
-        env:
-        - name: PARANOIA
-          value: "1"
-        - name: ANOMALY_INBOUND
-          value: "5"
-        - name: ANOMALY_OUTBOUND
-          value: "4"
-        - name: MODSEC_RULE_ENGINE
-          value: "On"
-        - name: BACKEND
-          value: "http://rancher.cattle-system.svc.cluster.local:80"
-        - name: PORT
-          value: "8080"
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: waf-rancher
-  namespace: default
-spec:
-  type: ClusterIP
-  selector:
-    app: waf-rancher
-  ports:
-  - port: 80
-    targetPort: 8080
+# ---
+# apiVersion: apps/v1
+# kind: Deployment
+# metadata:
+#   name: waf-argocd
+#   namespace: default
+#   labels:
+#     app: waf-argocd
+# spec:
+#   replicas: 1
+#   selector:
+#     matchLabels:
+#       app: waf-argocd
+#   template:
+#     metadata:
+#       labels:
+#         app: waf-argocd
+#     spec:
+#       containers:
+#       - name: modsecurity
+#         image: owasp/modsecurity-crs:nginx-alpine
+#         ports:
+#         - containerPort: 8080
+#         resources:
+#           requests:
+#             memory: "64Mi"
+#             cpu: "50m"
+#           limits:
+#             memory: "256Mi"
+#             cpu: "200m"
+#         env:
+#         - name: PARANOIA
+#           value: "1"
+#         - name: ANOMALY_INBOUND
+#           value: "5"
+#         - name: ANOMALY_OUTBOUND
+#           value: "4"
+#         - name: MODSEC_RULE_ENGINE
+#           value: "On"
+#         - name: BACKEND
+#           value: "http://argocd-server.argocd.svc.cluster.local:80"
+#         - name: PORT
+#           value: "8080"
+# ---
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: waf-argocd
+#   namespace: default
+# spec:
+#   type: ClusterIP
+#   selector:
+#     app: waf-argocd
+#   ports:
+#   - port: 80
+#     targetPort: 8080
+# ---
+# apiVersion: apps/v1
+# kind: Deployment
+# metadata:
+#   name: waf-rancher
+#   namespace: default
+#   labels:
+#     app: waf-rancher
+# spec:
+#   replicas: 1
+#   selector:
+#     matchLabels:
+#       app: waf-rancher
+#   template:
+#     metadata:
+#       labels:
+#         app: waf-rancher
+#     spec:
+#       containers:
+#       - name: modsecurity
+#         image: owasp/modsecurity-crs:nginx-alpine
+#         ports:
+#         - containerPort: 8080
+#         resources:
+#           requests:
+#             memory: "64Mi"
+#             cpu: "50m"
+#           limits:
+#             memory: "256Mi"
+#             cpu: "200m"
+#         env:
+#         - name: PARANOIA
+#           value: "1"
+#         - name: ANOMALY_INBOUND
+#           value: "5"
+#         - name: ANOMALY_OUTBOUND
+#           value: "4"
+#         - name: MODSEC_RULE_ENGINE
+#           value: "On"
+#         - name: BACKEND
+#           value: "http://rancher.cattle-system.svc.cluster.local:80"
+#         - name: PORT
+#           value: "8080"
+# ---
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: waf-rancher
+#   namespace: default
+# spec:
+#   type: ClusterIP
+#   selector:
+#     app: waf-rancher
+#   ports:
+#   - port: 80
+#     targetPort: 8080
