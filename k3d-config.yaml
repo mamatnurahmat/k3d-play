@@ -3,7 +3,7 @@ kind: Simple
 metadata:
   name: k3d-gateway-demo
 servers: 1
-agents: 2
+agents: 3
 options:
   k3d:
     wait: true
@@ -23,12 +23,15 @@ options:
       - arg: --node-label=nodetype=back
         nodeFilters:
           - agent:1
+      - arg: --node-label=nodetype=proxy
+        nodeFilters:
+          - agent:2
 ports:
-  # Map localhost:8081 to NodePort 30000 for HTTP
-  - port: "8081:30000"
+  # Map localhost:80 to NodePort 30000 for HTTP
+  - port: "80:30000"
     nodeFilters:
       - loadbalancer
-  # Map localhost:8443 to NodePort 30443 for HTTPS
-  - port: "8443:30443"
+  # Map localhost:443 to NodePort 30443 for HTTPS
+  - port: "443:30443"
     nodeFilters:
       - loadbalancer

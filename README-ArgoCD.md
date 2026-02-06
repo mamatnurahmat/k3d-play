@@ -18,39 +18,61 @@ In this setup, we assume access is through `localhost` mapped via k3d's proxy lo
 
 ### Installation Steps
 
-1.  **Run the Setup Script (Kustomize)**
-    This script installs ArgoCD using Kustomize (`argocd-install/`) and patches it to run in "insecure" mode (HTTP).
+1.  **Generate TLS Certificates (For HTTPS)**
+    Since we are running locally with HTTPS on standard port 443, we need a self-signed certificate for the Gateway.
+    ```bash
+    # Generate Key and Cert
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+      -keyout localhost.key \
+      -out localhost.crt \
+      -subj "/CN=localhost/O=k3d-demo"
+
+    # Create Secret in default namespace (where Gateway resides)
+    kubectl create secret tls localhost-tls \
+      -n default \
+      --key localhost.key \
+      --cert localhost.crt
+    ```
+
+2.  **Run the Setup Script (Kustomize)**
+    This script installs ArgoCD utilizing Kustomize (`bootstrap/`) and patches it to run in "insecure" mode (HTTP), allowing the Gateway to handle TLS termination.
     ```bash
     ./setup-argocd.sh
     ```
     *Files used:*
-    *   `argocd-install/kustomization.yaml`: Main declaration.
-    *   `argocd-install/server-insecure-patch.yaml`: Patch for `--insecure`.
+    *   `bootstrap/kustomization.yaml`: Main declaration.
+    *   `bootstrap/server-insecure-patch.yaml`: Patch for `--insecure`.
 
-2.  **Bootstrap Gateway (GitOps)**
+3.  **Bootstrap Gateway (GitOps)**
     We use ArgoCD to install the Gateway infrastructure (CRDs + Nginx Fabric).
     ```bash
-    kubectl apply -f gitops/
+    # Install Gateway API CRDs (Experimental version)
+    kubectl apply -f gitops/core/gateway-crds-app.yaml
+    
+    # Install Nginx Gateway Fabric Controller
+    kubectl apply -f gitops/core/gateway-app.yaml
     ```
-    *This creates two ArgoCD Applications:*
-    *   `gateway-api-crds`: Installs experimental CRDs.
-    *   `nginx-gateway-fabric`: Installs the controller (NodePort 30000).
+    Wait for the ArgoCD applications to sync and the controller pod to be running in `nginx-gateway` namespace.
 
-3.  **Deploy the Route**
-    Apply the HTTPRoute to route traffic from the Gateway to ArgoCD.
+4.  **Configure Gateway & Route**
+    Apply the Gateway infrastructure (Listeners) and the HTTPRoute for ArgoCD.
     ```bash
-    kubectl apply -f manifests/argocd-route.yaml
+    # Create the Gateway Class and Gateway Listener (HTTPS on 443)
+    kubectl apply -f manifests/infra/gateway.yaml
+
+    # Create the Route to expose ArgoCD
+    kubectl apply -f manifests/routes/argocd-route.yaml
     ```
 
-4.  **Configure DNS (Local)**
-    Since we are using `argocd.localhost`, ensure it resolves to `127.0.0.1`.
-    Add this to your `/etc/hosts` (Linux/macOS) or `C:\Windows\System32\drivers\etc\hosts` (Windows):
+5.  **Configure DNS (Local)**
+    Ensure `argocd.localhost` resolves to `127.0.0.1`.
+    Add this to your `/etc/hosts` (if not using automatic localhost resolution):
     ```text
     127.0.0.1 argocd.localhost
     ```
 
-5.  **Access ArgoCD**
-    - **URL**: [http://argocd.localhost:8081](http://argocd.localhost:8081)
+6.  **Access ArgoCD**
+    - **URL**: [https://argocd.localhost](https://argocd.localhost) (Accept the self-signed certificate warning)
     - **Get Password**:
       ```bash
       kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d && echo ""
@@ -61,11 +83,12 @@ In this setup, we assume access is through `localhost` mapped via k3d's proxy lo
 
 ```mermaid
 graph LR
-    User -->|http://argocd.localhost:8081| K3dLB["K3d LoadBalancer"]
-    K3dLB -->|NodePort 30000| NGF["Nginx Gateway Fabric"]
-    NGF -->|HTTPRoute| ArgoServer["ArgoCD Server"]
+    User -->|https://argocd.localhost| K3dLB["K3d LoadBalancer (Port 443)"]
+    K3dLB -->|NodePort 30443| NGF["Nginx Gateway Fabric (Proxy Node)"]
+    NGF -- "Terminates TLS" -->|HTTP| ArgoServer["ArgoCD Server"]
     
-    subgraph "ArgoCD Namespace"
+    subgraph "Cluster"
+    NGF
     ArgoServer
     end
 ```
