@@ -1,5 +1,6 @@
 # WAF Deployments for each Domain
 # Uses port 8080 because container runs as non-root user
+# Integrated with CrowdSec for IP-based anomaly detection
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -19,6 +20,7 @@ spec:
         app: waf-app001
     spec:
       containers:
+      # ModSecurity WAF with OWASP CRS
       - name: modsecurity
         image: owasp/modsecurity-crs:nginx-alpine
         ports:
@@ -39,10 +41,101 @@ spec:
           value: "4"
         - name: MODSEC_RULE_ENGINE
           value: "On"
+        - name: MODSEC_AUDIT_ENGINE
+          value: "On"
+        - name: MODSEC_AUDIT_LOG_FORMAT
+          value: "JSON"
+        - name: MODSEC_AUDIT_LOG
+          value: "/var/log/modsec/audit.log"
         - name: BACKEND
           value: "http://app001.default.svc.cluster.local:80"
         - name: PORT
           value: "8080"
+        # CrowdSec Bouncer settings (for Lua bouncer if enabled)
+        - name: CROWDSEC_LAPI_URL
+          value: "http://crowdsec-lapi.default.svc.cluster.local:8080"
+        - name: CROWDSEC_LAPI_KEY
+          valueFrom:
+            secretKeyRef:
+              name: crowdsec-bouncer-key
+              key: api-key
+              optional: true
+        volumeMounts:
+        - name: shared-logs
+          mountPath: /var/log/nginx
+        - name: modsec-logs
+          mountPath: /var/log/modsec
+
+      # CrowdSec Agent - parses logs and sends detections to LAPI
+      - name: crowdsec-agent
+        image: crowdsecurity/crowdsec:latest
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            # Wait for CrowdSec to start, then disable whitelists for k8s testing
+            /docker_start.sh &
+            sleep 30
+            cscli parsers remove crowdsecurity/whitelists --force 2>/dev/null || true
+            cscli postoverflows remove crowdsecurity/cdn-whitelist --force 2>/dev/null || true
+            cscli postoverflows remove crowdsecurity/seo-bots-whitelist --force 2>/dev/null || true
+            # Reload to apply changes
+            kill -HUP 1
+            echo "Whitelists disabled for k8s testing"
+            # Keep container running
+            wait
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        env:
+        - name: DISABLE_LOCAL_API
+          value: "true"
+        - name: AGENT_USERNAME
+          value: "waf-app001-agent"
+        - name: AGENT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: crowdsec-agent-credentials
+              key: password
+              optional: true
+        - name: LOCAL_API_URL
+          value: "http://crowdsec-lapi.default.svc.cluster.local:8080"
+        - name: COLLECTIONS
+          value: "crowdsecurity/nginx crowdsecurity/http-cve"
+        - name: CROWDSEC_BYPASS_DB_VOLUME_CHECK
+          value: "true"
+        - name: DISABLE_ONLINE_API
+          value: "true"
+        # Skip postoverflows that whitelist private IPs
+        - name: NO_HUB_UPGRADE
+          value: "true"
+        volumeMounts:
+        - name: shared-logs
+          mountPath: /var/log/nginx
+          readOnly: true
+        - name: modsec-logs
+          mountPath: /var/log/modsec
+          readOnly: true
+        - name: crowdsec-acquis
+          mountPath: /etc/crowdsec/acquis.yaml
+          subPath: acquis.yaml
+        - name: crowdsec-data
+          mountPath: /var/lib/crowdsec/data
+
+      volumes:
+      - name: shared-logs
+        emptyDir: {}
+      - name: modsec-logs
+        emptyDir: {}
+      - name: crowdsec-data
+        emptyDir: {}
+      - name: crowdsec-acquis
+        configMap:
+          name: crowdsec-config
+
 ---
 apiVersion: v1
 kind: Service

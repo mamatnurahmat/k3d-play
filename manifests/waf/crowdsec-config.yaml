@@ -1,0 +1,63 @@
+# CrowdSec Configuration
+# Includes LAPI config, Agent acquis.yaml, and profiles
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: crowdsec-config
+  namespace: default
+data:
+  # Local API configuration
+  local_api_credentials.yaml: |
+    url: http://127.0.0.1:8080
+    login: localhost
+    password: localhost
+
+  # Agent acquisition configuration for parsing nginx/modsec logs
+  acquis.yaml: |
+    filenames:
+      - /var/log/nginx/access.log
+      - /var/log/nginx/error.log
+    labels:
+      type: nginx
+    ---
+    filenames:
+      - /var/log/modsec/audit.log
+    labels:
+      type: modsecurity
+
+  # Profiles for decisions
+  profiles.yaml: |
+    name: default_ip_remediation
+    filters:
+      - Alert.Remediation == true && Alert.GetScope() == "Ip"
+    decisions:
+      - type: ban
+        duration: 4h
+    on_success: break
+
+  # Disable default private IP whitelist for Kubernetes testing
+  # This overrides crowdsecurity/cdn-whitelist and allows private IPs to be detected
+  disable-private-whitelist.yaml: |
+    name: kubernetes-whitelist-override
+    description: "Disable default private IP whitelist for k8s testing"
+    whitelist:
+      reason: "Allow private IP detection"
+      expression:
+        - "false"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: crowdsec-collections
+  namespace: default
+data:
+  # Script to install collections on startup
+  install-collections.sh: |
+    #!/bin/sh
+    set -e
+    echo "Installing CrowdSec collections..."
+    cscli collections install crowdsecurity/nginx --force
+    cscli collections install crowdsecurity/http-cve --force
+    cscli collections install crowdsecurity/modsecurity --force || true
+    echo "CrowdSec collections installed successfully"

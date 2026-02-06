@@ -1,0 +1,94 @@
+# CrowdSec Local API (LAPI) Deployment
+# Central decision engine for CrowdSec agents and bouncers
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: crowdsec-lapi
+  namespace: default
+  labels:
+    app: crowdsec-lapi
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: crowdsec-lapi
+  template:
+    metadata:
+      labels:
+        app: crowdsec-lapi
+    spec:
+      containers:
+      - name: crowdsec-lapi
+        image: crowdsecurity/crowdsec:latest
+        ports:
+        - containerPort: 8080
+          name: lapi
+        - containerPort: 6060
+          name: metrics
+        env:
+        - name: DISABLE_AGENT
+          value: "true"
+        - name: DISABLE_ONLINE_API
+          value: "false"
+        - name: COLLECTIONS
+          value: "crowdsecurity/nginx crowdsecurity/http-cve"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        volumeMounts:
+        - name: crowdsec-data
+          mountPath: /var/lib/crowdsec/data
+        - name: crowdsec-config
+          mountPath: /etc/crowdsec/config.yaml.local
+          subPath: config.yaml.local
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 5
+      volumes:
+      - name: crowdsec-data
+        emptyDir: {}
+      - name: crowdsec-config
+        configMap:
+          name: crowdsec-lapi-config
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: crowdsec-lapi-config
+  namespace: default
+data:
+  config.yaml.local: |
+    api:
+      server:
+        listen_uri: 0.0.0.0:8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: crowdsec-lapi
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app: crowdsec-lapi
+  ports:
+  - name: lapi
+    port: 8080
+    targetPort: 8080
+  - name: metrics
+    port: 6060
+    targetPort: 6060
